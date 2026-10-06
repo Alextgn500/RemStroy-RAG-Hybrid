@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RemStroy RAG Hybrid</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="28" height="28" rx="6" fill="#2f3542"/>
+        <path d="M8 22 L8 12 L13 8 L18 12 L18 22"
+              stroke="#ffffff" stroke-width="2"
+              fill="none" stroke-linejoin="round"/>
+        <rect x="14" y="16" width="3" height="6" fill="#ffffff"/>
+      </svg>
+      <div class="logo-text">
+        <span class="logo-title">RemStroy</span>
+        <span class="logo-sub">Ассистент · Hybrid RAG</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btn-reindex" class="btn-ghost">Переиндексировать</button>
+      <button id="btn-reset" class="btn-ghost">Новый диалог</button>
+      <span id="status" class="status"></span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="chat" id="chat">
+      <div class="message assistant">
+        <div class="bubble">
+          Здравствуйте! Я ассистент RemStroy. Задайте вопрос о ремонте
+          квартир, установке оконных или балконных блоков.
+        </div>
+      </div>
+    </section>
+
+    <section class="composer">
+      <textarea id="question" rows="2"
+        placeholder="Например: Сколько стоит установка трёхслойного окна?"></textarea>
+      <button id="btn-send" class="btn-primary">Спросить</button>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

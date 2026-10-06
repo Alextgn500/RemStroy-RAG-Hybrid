@@ -1,0 +1,119 @@
+# RemStroy RAG Hybrid
+
+Учебный RAG-ассистент для компании **RemStroy** — ремонт квартир и установка оконных/балконных блоков. Демонстрирует продвинутый retrieval с **гибридным поиском** (BM25 + embeddings) и объединением результатов через **Reciprocal Rank Fusion**.
+
+## ✨ Возможности
+
+- **Гибридный поиск**: параллельно работают два независимых механизма:
+  - **Embedding-поиск** — семантическое сходство через Gemini `gemini-embedding-001`
+  - **BM25** — поиск по ключевым словам без LLM (`rank_bm25`)
+- **Извлечение ключевых слов** из вопроса: регулярки + фильтр стоп-слов + частотный анализ (без LLM)
+- **Reciprocal Rank Fusion (RRF, k=60)** — корректное объединение результатов двух поисковиков
+- **Чат-интерфейс** с блоком «Логика работы RAG»: ключевые слова, embedding-топ-5, BM25-топ-5, финальный набор после RRF
+- **Многотуровая память** диалога
+- **ChromaDB PersistentClient** — постоянное векторное хранилище
+- **Retry-логика** при 429 (rate limit) и 503 (перегрузка) на стороне Gemini
+
+## 🏗 Архитектура
+
+    Пользователь
+        │
+        ▼
+    [HTML/CSS/JS чат] ──► POST /api/query
+                            │
+                            ▼
+                    [Python HTTP-сервер]
+                            │
+            ┌───────────────┼───────────────┐
+            ▼               ▼               ▼
+      Ключевые слова   Embedding-поиск   BM25-поиск
+      (без LLM)        (Gemini API)      (rank_bm25)
+            │               │               │
+            │               ▼               ▼
+            │           ChromaDB        BM25-индекс
+            │               │               │
+            │               └───────┬───────┘
+            │                       ▼
+            │                RRF (k=60)
+            │                       │
+            └──────────► LLM (gemini-3.1-flash-lite)
+                                    │
+                                    ▼
+                            AI-ответ + все чанки
+
+## 📁 Структура проекта
+
+    RemStroy-RAG-Hybrid/
+    ├── README.md
+    ├── requirements.txt
+    ├── .gitignore
+    ├── src/
+    │   ├── __init__.py
+    │   ├── config.py               # настройки: модели, пути, порт
+    │   ├── openai_client.py        # обёртка Gemini API + retry
+    │   ├── chroma_store.py         # ChromaDB PersistentClient
+    │   ├── rag_pipeline.py         # гибридный поиск + RRF + генерация
+    │   └── main.py                 # HTTP-сервер, точка входа
+    ├── knowledge_base/             # 7 демо-документов RemStroy
+    ├── static/                     # фронтенд
+    └── notebooks/                  # демонстрационный ноутбук
+
+## 🚀 Запуск
+
+### Локально
+
+    git clone https://github.com/Alextgn500/RemStroy-RAG-Hybrid.git
+    cd RemStroy-RAG-Hybrid
+    pip install -r requirements.txt
+
+    export GEMINI_API_KEY="AIza..."
+
+    cd src
+    python main.py
+
+Откройте http://localhost:8000.
+
+При первом запуске индекс ChromaDB пуст. Нажмите «Переиндексировать» в интерфейсе или вызовите:
+
+    curl -X POST http://localhost:8000/api/reindex
+
+### В Google Colab
+
+1. Откройте `notebooks/RemStroy_RAG_Hybrid.ipynb` в Colab
+2. Добавьте `GEMINI_API_KEY` в Secrets (🔑 → Notebook access)
+3. Выполните ячейки по порядку
+
+## ⚙️ Технические решения
+
+| Компонент | Выбор | Почему |
+|---|---|---|
+| **Embedding** | `gemini-embedding-001` | Бесплатный тариф Gemini, без карты |
+| **LLM** | `gemini-3.1-flash-lite` | Стабильнее Flash при перегрузках Google |
+| **Keyword search** | `rank_bm25` (BM25Okapi) | Классический алгоритм, без LLM |
+| **Fusion** | RRF (k=60) | Не требует нормализации скоров |
+| **Vector DB** | ChromaDB PersistentClient | Простота, локальное хранилище |
+| **HTTP** | `http.server` из stdlib | Без внешних фреймворков |
+
+## 🔬 Как работает RRF
+
+BM25 и cosine similarity имеют **разные шкалы** — их нельзя складывать напрямую. RRF использует **ранги**:
+
+    score(doc) = Σ 1 / (k + rank_i(doc))
+
+где `k = 60`, `rank_i` — позиция документа в i-м ранжированном списке.
+
+## 📝 Примеры запросов
+
+- «Сколько стоит установка трёхслойного окна на балконе?»
+- «Какие гарантии вы даёте на монтаж окон?»
+- «Что такое тёплый монтаж и чем он отличается от стандартного?»
+
+## ⚠️ Известные ограничения
+
+- **Бесплатный тариф Gemini**: 5–15 запросов в минуту на Flash/Lite-моделях. При демонстрации — пауза 10–15 сек между вопросами
+- **503 UNAVAILABLE** — периодическая перегрузка серверов Google. Retry в `openai_client.py` ждёт и повторяет
+- **Сессия Colab** живёт ограниченное время (30–90 мин неактивности), после чего публичная ссылка перестаёт работать
+
+## 📄 Лицензия
+
+Учебный проект. Демо-данные RemStroy вымышлены.
