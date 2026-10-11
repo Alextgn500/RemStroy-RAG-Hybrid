@@ -1,13 +1,17 @@
-"""Обёртка Gemini API с retry для 503/429."""
+"""Обёртка RouterAI (OpenAI-совместимый API)."""
 
 import time
 from openai import OpenAI
 from config import (
-    GEMINI_API_KEY, BASE_URL, CHAT_MODEL, EMBEDDING_MODEL,
-    TEMPERATURE, MAX_TOKENS,
+    ROUTERAI_API_KEY,
+    BASE_URL,
+    CHAT_MODEL,
+    EMBEDDING_MODEL,
+    TEMPERATURE,
+    MAX_TOKENS,
 )
 
-_client = OpenAI(api_key=GEMINI_API_KEY, base_url=BASE_URL)
+_client = OpenAI(api_key=ROUTERAI_API_KEY, base_url=BASE_URL)
 
 
 def get_embedding(text):
@@ -20,8 +24,8 @@ def get_embeddings_batch(texts):
     return [item.embedding for item in response.data]
 
 
-def chat(messages, max_tokens=MAX_TOKENS, max_retries=3):
-    """Retry с паузами: 30, 60, 90 сек при 503; 65 сек при 429."""
+def chat(messages, max_tokens=MAX_TOKENS, max_retries=2):
+    """Отправляет запрос к RouterAI с retry при 429/503."""
     last_error = None
     for attempt in range(1, max_retries + 1):
         try:
@@ -32,20 +36,20 @@ def chat(messages, max_tokens=MAX_TOKENS, max_retries=3):
                 max_tokens=max_tokens,
             )
             choice = response.choices[0]
-            print(f"[LLM] finish_reason={choice.finish_reason}, "
-                  f"completion_tokens={response.usage.completion_tokens}")
+            print(
+                f"[LLM] finish_reason={choice.finish_reason}, "
+                f"completion_tokens={response.usage.completion_tokens}"
+            )
             return choice.message.content
         except Exception as e:
             last_error = e
             err_str = str(e)
             if "429" in err_str:
-                wait = 65
-                print(f"[LLM] Rate limit (429). Ждём {wait} сек...")
-                time.sleep(wait)
+                print(f"[LLM] Rate limit. Ждём 30 сек...")
+                time.sleep(30)
             elif "503" in err_str or "UNAVAILABLE" in err_str:
-                wait = 30 * attempt  # 30, 60, 90
-                print(f"[LLM] Перегрузка (503). Ждём {wait} сек... "
-                      f"(попытка {attempt}/{max_retries})")
+                wait = 15 * attempt
+                print(f"[LLM] Перегрузка. Ждём {wait} сек...")
                 time.sleep(wait)
             else:
                 raise

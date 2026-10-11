@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/
+
+# ChromaDB (данные монтируются через volume, не нужны в образе)
+chroma_db/
+
+# Логи
+logs/
+*.log
+
+# Документация (не нужна внутри образа)
+README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Окружение
+.env
+.env.local
+
+# Временные файлы
+.DS_Store
+Thumbs.db
+chroma_data/
+notebooks/
