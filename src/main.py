@@ -11,6 +11,7 @@ import os
 import sys
 import http.server
 import socketserver
+import urllib.parse  # <-- ДОБАВЛЕНО: для декодирования URL
 
 # Разрешаем запуск как `python src/main.py` из корня проекта
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -43,7 +44,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return {}
 
     def _serve_static(self, rel_path):
-        safe_rel = rel_path.lstrip("/").replace("..", "")
+        # <-- ИЗМЕНЕНО: Убираем query-параметры (например, ?v=1) и декодируем URL
+        # Это важно, чтобы /widget/widget.html?foo=bar корректно находил файл
+        parsed_path = urllib.parse.urlparse(rel_path).path
+        safe_rel = parsed_path.lstrip("/").replace("..", "")
+
         full = os.path.join(STATIC_DIR, safe_rel)
         if not os.path.isfile(full):
             self.send_error(404, "Not found")
@@ -51,10 +56,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         ext = os.path.splitext(full)[1].lower()
         content_type = {
             ".html": "text/html; charset=utf-8",
-            ".css":  "text/css; charset=utf-8",
-            ".js":   "application/javascript; charset=utf-8",
-            ".svg":  "image/svg+xml",
-            ".png":  "image/png",
+            ".css": "text/css; charset=utf-8",
+            ".js": "application/javascript; charset=utf-8",
+            ".svg": "image/svg+xml",
+            ".png": "image/png",
         }.get(ext, "application/octet-stream")
         with open(full, "rb") as fh:
             data = fh.read()
@@ -66,17 +71,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     # ---------- routing ----------
     def do_GET(self):
-        if self.path in ("/", "/index.html"):
+        # <-- ИЗМЕНЕНО: Более гибкая логика роутинга
+        # Отрезаем query-параметры для проверки пути
+        path = urllib.parse.urlparse(self.path).path
+
+        if path in ("/", "/index.html"):
             self._serve_static("index.html")
-        elif self.path == "/api/status":
+        elif path == "/demo":
+            self._serve_static("demo.html")
+        elif path == "/widget":
+            # <-- ДОБАВЛЕНО: Отдаем страницу виджета
+            self._serve_static("widget/widget.html")
+        elif path == "/api/status":
             self._send_json({"indexed_chunks": count()})
-        elif self.path == "/health":
+        elif path == "/health":
             self._send_json({"status": "ok"})
         else:
+            # <-- ИЗМЕНЕНО: Все остальные пути пытаемся отдать как статику
+            # (это нужно для widget_style.css и widget_app.js)
             self._serve_static(self.path)
 
     def do_POST(self):
-        if self.path == "/api/query":
+        # <-- ИЗМЕНЕНО: Игнорируем query-параметры при проверке пути
+        path = urllib.parse.urlparse(self.path).path
+
+        if path == "/api/query":
             data = self._read_json()
             question = (data.get("question") or "").strip()
             if not question:
@@ -88,7 +107,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"error": str(e)}, status=500)
 
-        elif self.path == "/api/reindex":
+        elif path == "/api/reindex":
             try:
                 n = build_index()
                 reset_history()
@@ -96,7 +115,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"error": str(e)}, status=500)
 
-        elif self.path == "/api/reset":
+        elif path == "/api/reset":
             reset_history()
             self._send_json({"ok": True})
 

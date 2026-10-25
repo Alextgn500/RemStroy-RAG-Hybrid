@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Консультант</title>
+    <!-- Подключаем CSS с правильным путем -->
+    <link rel="stylesheet" href="/widget/widget_style.css">
+    <!-- Иконки -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Шапка -->
+        <header class="chat-header">
+            <div class="bot-info">
+                <div class="bot-avatar">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="bot-details">
+                    <h1>AI-Консультант</h1>
+                    <div class="status">
+                        <span class="dot"></span> Онлайн
+                    </div>
+                </div>
+            </div>
+            <!-- Кнопка закрытия (если виджет открыт в iframe, она скажет родителю закрыть окно) -->
+            <button class="close-btn" onclick="window.parent.postMessage('closeWidget', '*')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </header>
+
+        <!-- Окно чата -->
+        <main class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                <div class="message-content">
+                    Здравствуйте! Я AI-ассистент компании. Готов ответить на любые вопросы по окнам, балконам и отделке. Чем могу помочь?
+                </div>
+            </div>
+        </main>
+
+        <!-- Поле ввода -->
+        <footer class="chat-input-area">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Задайте любой вопрос..." autocomplete="off">
+                <button id="sendBtn" class="send-btn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="disclaimer">
+                Ответы генерируются ИИ на основе базы знаний компании
+            </div>
+        </footer>
+    </div>
+
+    <!-- Подключаем JS с правильным путем -->
+    <script src="/widget/widget_app.js"></script>
+</body>
+</html>
